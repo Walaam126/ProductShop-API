@@ -6,8 +6,7 @@ const { Product } = require("./db/models");
 //always before all routes
 app.use(express.json());
 
-let products = require("./data");
-
+//view all
 app.get("/products", async (req, res) => {
   try {
     const productslist = await Product.findAll({
@@ -19,24 +18,46 @@ app.get("/products", async (req, res) => {
   }
 });
 
-app.delete("/products/:productId", (req, res) => {
-  const deleted = products.find(
-    (product) => product.id === +req.params.productId
-  );
-  if (deleted) {
-    products = products.filter(
-      (product) => product.id !== +req.params.productId
-    );
-    res.status(204).end();
-  } else {
-    res.status(404).json({ message: "product not found" });
+//delete product
+app.delete("/products/:productId", async (req, res) => {
+  try {
+    const deleted = await Product.findByPk(req.params.productId);
+    if (deleted) {
+      await deleted.destroy();
+      res.status(204).end();
+    } else {
+      res.status(404).json({ message: "product not found" });
+    }
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+//create product
+app.post("/products", async (req, res) => {
+  try {
+    const newProduct = await Product.create(req.body);
+    res.status(201).json(newProduct);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+//update product
+app.put("/products/:productId", async (req, res) => {
+  try {
+    const updated = await Product.findByPk(req.params.productId);
+    if (updated) {
+      await updated.update(req.body);
+      res.status(204).end();
+    } else {
+      res.status(404).json({ message: "product not found" });
+    }
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 });
 
 db.sequelize.sync();
-app.post("/products", (req, res) => {
-  req.body.id = products[products.length - 1].id + 1;
-  products.push(req.body);
-  res.status(201).json(req.body);
-});
+
 app.listen(8000);
