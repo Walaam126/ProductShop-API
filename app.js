@@ -1,63 +1,29 @@
 const express = require("express");
 const db = require("./db/models");
+const Productrouter = require("./routes/products");
+const Shoprouter = require("./routes/shops");
+const cors = require("cors");
+const path = require("path");
 const app = express();
-const { Product } = require("./db/models");
+app.use(cors());
 
-//always before all routes
 app.use(express.json());
 
-//view all
-app.get("/products", async (req, res) => {
-  try {
-    const productslist = await Product.findAll({
-      attributes: { exclude: ["createdAt", "updatedAt"] },
-    });
-    res.json(productslist);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
+app.use("/products", Productrouter);
+app.use("/shops", Shoprouter);
+app.use("/media", express.static(path.join(__dirname, "media")));
+app.use((req, res, next) => {
+  next({
+    status: 404,
+    message: "Path not found",
+  });
 });
 
-//delete product
-app.delete("/products/:productId", async (req, res) => {
-  try {
-    const deleted = await Product.findByPk(req.params.productId);
-    if (deleted) {
-      await deleted.destroy();
-      res.status(204).end();
-    } else {
-      res.status(404).json({ message: "product not found" });
-    }
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
+app.use((err, req, res, next) => {
+  res
+    .status(err.status || 500)
+    .json({ message: err.message || "Internal Server Error" });
 });
-
-//create product
-app.post("/products", async (req, res) => {
-  try {
-    const newProduct = await Product.create(req.body);
-    res.status(201).json(newProduct);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
-
-//update product
-app.put("/products/:productId", async (req, res) => {
-  try {
-    const updated = await Product.findByPk(req.params.productId);
-    if (updated) {
-      await updated.update(req.body);
-      res.status(204).end();
-    } else {
-      res.status(404).json({ message: "product not found" });
-    }
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
-
-db.sequelize.sync();
+db.sequelize.sync({ alter: true });
 
 app.listen(8000);
